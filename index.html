@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Focus Wheel — 理想の未来日記</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --white: #ffffff;
+      --bg: #f9f8f7;
+      --text: #1c1c1c;
+      --text-mid: #555;
+      --text-light: #999;
+      --accent: #b8a99a;
+      --accent-soft: #ede7e1;
+      --border: #e6e3e0;
+      --shadow: 0 4px 24px rgba(0,0,0,0.07);
+    }
+
+    body {
+      font-family: 'Noto Sans JP', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ─── Header ─── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .header-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--text);
+      text-decoration: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .logo-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ─── Main ─── */
+    main {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 120px;
+    }
+
+    /* ─── Views ─── */
+    .view { display: none; animation: fadeIn 0.2s ease; }
+    .view.active { display: block; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── Buttons ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      border-radius: 100px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 400;
+      cursor: pointer;
+      transition: all 0.18s;
+      border: none;
+      letter-spacing: 0.03em;
+    }
+
+    .btn-primary {
+      background: var(--text);
+      color: white;
+    }
+    .btn-primary:hover { background: #333; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-light);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: #bbb; color: var(--text-mid); }
+
+    .icon-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-light);
+      font-size: 13px;
+      transition: all 0.18s;
+      flex-shrink: 0;
+    }
+    .icon-btn:hover { border-color: #bbb; color: var(--text); }
+    .icon-btn.danger:hover { border-color: #e8a0a0; color: #c44; }
+
+    /* ─── List View ─── */
+    .list-hero {
+      margin-bottom: 40px;
+    }
+
+    .list-hero h1 {
+      font-size: 30px;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      line-height: 1.3;
+      margin-bottom: 6px;
+    }
+
+    .list-hero p {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+
+    .list-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 28px;
+    }
+
+    .entry-count {
+      font-size: 13px;
+      color: var(--text-light);
+    }
+
+    .entries-grid { display: grid; gap: 14px; }
+
+    .entry-card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px 28px;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .entry-card:hover {
+      border-color: var(--accent);
+      box-shadow: var(--shadow);
+      transform: translateY(-2px);
+    }
+
+    .entry-card-mini-wheel {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+    }
+
+    .entry-card-body { flex: 1; min-width: 0; }
+
+    .entry-card-date {
+      font-size: 11px;
+      color: var(--text-light);
+      letter-spacing: 0.06em;
+      margin-bottom: 5px;
+    }
+
+    .entry-card-title {
+      font-size: 17px;
+      font-weight: 400;
+      margin-bottom: 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .entry-card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      background: var(--accent-soft);
+      color: var(--text-mid);
+      font-size: 11px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      overflow: hidden;
+      max-width: 160px;
+      text-overflow: ellipsis;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 72px 24px;
+    }
+
+    .empty-wheel {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      opacity: 0.25;
+    }
+
+    .empty-state h3 {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-mid);
+      margin-bottom: 8px;
+    }
+
+    .empty-state p {
+      font-size: 13px;
+      color: var(--text-light);
+      line-height: 1.8;
+    }
+
+    /* ─── Editor / Detail header ─── */
+    .page-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+
+    .back-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--text-light);
+      font-size: 16px;
+      transition: all 0.18s;
+      flex-shrink: 0;
+      margin-top: 4px;
+    }
+    .back-btn:hover { border-color: #bbb; color: var(--text); }
+
+    .page-header-body { flex: 1; }
+
+    .editor-title-input {
+      display: block;
+      width: 100%;
+      border: none;
+      border-bottom: 2px solid var(--border);
+      font-family: inherit;
+      font-size: 26px;
+      font-weight: 300;
+      color: var(--text);
+      padding: 4px 0 10px;
+      background: transparent;
+      outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: 0.03em;
+    }
+    .editor-title-input:focus { border-color: var(--accent); }
+    .editor-title-input::placeholder { color: var(--border); }
+
+    .detail-title-text {
+      font-size: 26px;
+      font-weight: 300;
+      letter-spacing: 0.03em;
+      line-height: 1.3;
+      padding-bottom: 4px;
+    }
+
+    .detail-date-text {
+      font-size: 12px;
+      color: var(--text-light);
+      margin-top: 6px;
+      letter-spacing: 0.04em;
+    }
+
+    .detail-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    /* ─── Wheel layout ─── */
+    .wheel-layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+
+    @media (min-width: 640px) {
+      .wheel-layout {
+        grid-template-columns: auto 1fr;
+        gap: 48px;
+      }
+    }
+
+    .wheel-wrap {
+      width: 100%;
+      max-width: 320px;
+      margin: 0 auto;
+    }
+
+    @media (min-width: 640px) {
+      .wheel-wrap {
+        width: 280px;
+        margin: 0;
+      }
+    }
+
+    .wheel-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* ─── Statements list ─── */
+    .statements-section { flex: 1; }
+
+    .section-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 16px;
+    }
+
+    .statement-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: padding-left 0.15s;
+    }
+
+    .statement-row:last-child { border-bottom: none; }
+    .statement-row:hover { padding-left: 4px; }
+    .statement-row.readonly { cursor: default; }
+    .statement-row.readonly:hover { padding-left: 0; }
+    .statement-row.empty { opacity: 0.5; }
+
+    .row-num {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      min-width: 18px;
+      padding-top: 2px;
+      letter-spacing: 0.04em;
+    }
+
+    .row-text {
+      font-size: 14px;
+      line-height: 1.65;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .row-text.placeholder {
+      color: var(--border);
+      font-style: italic;
+    }
+
+    /* ─── Save bar ─── */
+    .save-bar {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-top: 1px solid var(--border);
+      padding: 14px 24px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      z-index: 50;
+    }
+
+    /* ─── Modal ─── */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(28,28,28,0.35);
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.22s;
+    }
+
+    .overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .modal {
+      background: var(--white);
+      border-radius: 28px 28px 0 0;
+      padding: 28px 24px 32px;
+      width: 100%;
+      max-width: 580px;
+      transform: translateY(40px);
+      transition: transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+
+    .overlay.open .modal { transform: translateY(0); }
+
+    .modal-pill {
+      width: 36px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 22px;
+    }
+
+    .modal-meta {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--accent);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    .modal-hint {
+      font-size: 11px;
+      color: var(--text-light);
+      margin-bottom: 10px;
+    }
+
+    textarea.modal-input {
+      width: 100%;
+      border: none;
+      border-bottom: 1.5px solid var(--border);
+      font-family: inherit;
+      font-size: 17px;
+      font-weight: 300;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      line-height: 1.7;
+      padding-bottom: 12px;
+      background: transparent;
+      min-height: 100px;
+      max-height: 200px;
+    }
+
+    textarea.modal-input:focus { border-color: var(--accent); }
+    textarea.modal-input::placeholder { color: var(--border); }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .modal-shortcut {
+      font-size: 11px;
+      color: var(--text-light);
+      align-self: center;
+      margin-right: auto;
+    }
+
+    /* ─── Segment colors ─── */
+    .seg-fill-0  { fill: #f5ede5; }
+    .seg-fill-1  { fill: #f2e8df; }
+    .seg-fill-2  { fill: #efe3d9; }
+    .seg-fill-3  { fill: #ecded3; }
+    .seg-fill-4  { fill: #e9d9cd; }
+    .seg-fill-5  { fill: #e6d4c7; }
+    .seg-fill-6  { fill: #e3cfc1; }
+    .seg-fill-7  { fill: #e0cabb; }
+    .seg-fill-8  { fill: #ddc5b5; }
+    .seg-fill-9  { fill: #dac0af; }
+    .seg-fill-10 { fill: #d7bba9; }
+    .seg-fill-11 { fill: #d4b6a3; }
+    .seg-empty   { fill: #f7f6f5; }
+
+    .seg-path {
+      stroke: #ffffff;
+      stroke-width: 2;
+      transition: opacity 0.15s;
+      cursor: pointer;
+    }
+
+    .seg-path:hover { opacity: 0.78; }
+    .seg-path.readonly { cursor: default; }
+    .seg-path.readonly:hover { opacity: 1; }
+
+    @media (max-width: 480px) {
+      main { padding: 32px 16px 100px; }
+      .entry-card { padding: 18px 20px; }
+      .modal { border-radius: 24px 24px 0 0; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="logo" onclick="goHome()">
+      <div class="logo-dot"></div>
+      Focus Wheel
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ─── List View ─── -->
+  <div id="view-list" class="view active">
+    <div class="list-hero">
+      <h1>理想の未来を<br>描こう</h1>
+      <p>ポジティブな言葉で、引き寄せたい未来を書き留める</p>
+    </div>
+    <div class="list-controls">
+      <span class="entry-count" id="entry-count"></span>
+      <button class="btn btn-primary" onclick="startNew()">+ 新しいホイール</button>
+    </div>
+    <div class="entries-grid" id="entries-grid"></div>
+  </div>
+
+  <!-- ─── Editor View ─── -->
+  <div id="view-editor" class="view">
+    <div class="page-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div class="page-header-body">
+        <input
+          id="editor-title"
+          class="editor-title-input"
+          type="text"
+          placeholder="引き寄せたい夢や願いを書く…"
+          maxlength="60"
+        />
+      </div>
+    </div>
+    <div class="wheel-layout">
+      <div class="wheel-wrap">
+        <svg id="editor-svg" viewBox="-200 -200 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="statements-section">
+        <div class="section-label">ポジティブな言葉 — 12のアファメーション</div>
+        <div id="editor-rows"></div>
+      </div>
+    </div>
+    <div class="save-bar">
+      <button class="btn btn-ghost" onclick="goHome()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveEntry()">保存する</button>
+    </div>
+  </div>
+
+  <!-- ─── Detail View ─── -->
+  <div id="view-detail" class="view">
+    <div class="page-header">
+      <button class="back-btn" onclick="goHome()">←</button>
+      <div class="page-header-body">
+        <div class="detail-title-text" id="detail-title"></div>
+        <div class="detail-date-text" id="detail-date"></div>
+        <div class="detail-actions">
+          <button class="icon-btn" onclick="editCurrent()" title="編集">✎</button>
+          <button class="icon-btn danger" onclick="confirmDelete()" title="削除">✕</button>
+        </div>
+      </div>
+    </div>
+    <div class="wheel-layout">
+      <div class="wheel-wrap">
+        <svg id="detail-svg" viewBox="-200 -200 400 400" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="statements-section">
+        <div class="section-label">ポジティブな言葉</div>
+        <div id="detail-rows"></div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ─── Statement Modal ─── -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-pill"></div>
+    <div class="modal-meta" id="modal-meta"></div>
+    <div class="modal-hint">この願いについて、ポジティブに感じることを書いてください</div>
+    <textarea
+      class="modal-input"
+      id="modal-ta"
+      placeholder="例: 私はすでに豊かさに満ちている…"
+      rows="4"
+    ></textarea>
+    <div class="modal-actions">
+      <span class="modal-shortcut">⌘+Enter で保存</span>
+      <button class="btn btn-ghost" onclick="closeModal()">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveStatement()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Data ───────────────────────────────────────────────────────────────
+const STORE_KEY = 'focuswheel_v1';
+let entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+
+let state = {
+  view: 'list',
+  currentId: null,
+  statements: Array(12).fill(''),
+  editingIdx: null,
+};
+
+function save() {
+  localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+}
+
+// ─── Segment metadata ────────────────────────────────────────────────────
+const LABELS = [
+  '感謝', '喜び', '愛', '豊かさ',
+  '健康', '自由', '成長', '平和',
+  '繁栄', '幸福', '創造', '可能性',
+];
+
+// ─── Navigation ──────────────────────────────────────────────────────────
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  state.view = name;
+  window.scrollTo(0, 0);
+}
+
+function goHome() {
+  renderList();
+  showView('list');
+}
+
+function startNew() {
+  state.currentId = String(Date.now());
+  state.statements = Array(12).fill('');
+  document.getElementById('editor-title').value = '';
+  renderWheel('editor-svg', state.statements, true);
+  renderRows('editor-rows', state.statements, true);
+  showView('editor');
+  setTimeout(() => document.getElementById('editor-title').focus(), 100);
+}
+
+function editCurrent() {
+  const entry = entries.find(e => e.id === state.currentId);
+  if (!entry) return;
+  state.statements = [...entry.statements];
+  document.getElementById('editor-title').value = entry.title;
+  renderWheel('editor-svg', state.statements, true);
+  renderRows('editor-rows', state.statements, true);
+  showView('editor');
+}
+
+function viewEntry(id) {
+  const entry = entries.find(e => e.id === id);
+  if (!entry) return;
+  state.currentId = id;
+  state.statements = [...entry.statements];
+
+  document.getElementById('detail-title').textContent = entry.title || '無題';
+  document.getElementById('detail-date').textContent = formatDate(parseInt(id));
+
+  renderWheel('detail-svg', state.statements, false);
+  renderRows('detail-rows', state.statements, false);
+  showView('detail');
+}
+
+function saveEntry() {
+  const title = document.getElementById('editor-title').value.trim() || '無題';
+  const idx = entries.findIndex(e => e.id === state.currentId);
+  const entry = { id: state.currentId, title, statements: [...state.statements] };
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  save();
+  goHome();
+}
+
+function confirmDelete() {
+  if (!confirm('このホイールを削除しますか？')) return;
+  entries = entries.filter(e => e.id !== state.currentId);
+  save();
+  goHome();
+}
+
+// ─── List rendering ───────────────────────────────────────────────────────
+function renderList() {
+  const grid = document.getElementById('entries-grid');
+  const count = document.getElementById('entry-count');
+  const sorted = [...entries].reverse();
+
+  count.textContent = entries.length > 0 ? `${entries.length} 件のホイール` : '';
+
+  if (sorted.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <svg class="empty-wheel" viewBox="-60 -60 120 120" xmlns="http://www.w3.org/2000/svg">
+          ${buildWheelPaths(Array(12).fill(''), false, false)}
+        </svg>
+        <h3>まだホイールがありません</h3>
+        <p>「新しいホイール」から<br>理想の未来を描いてみましょう</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = sorted.map(e => {
+    const tags = e.statements.filter(s => s && s.trim()).slice(0, 3);
+    const filled = e.statements.filter(s => s && s.trim()).length;
+    const miniSvg = `<svg class="entry-card-mini-wheel" viewBox="-60 -60 120 120" xmlns="http://www.w3.org/2000/svg">
+      ${buildWheelPaths(e.statements, false, false, 55, 18)}
+    </svg>`;
+    return `<div class="entry-card" onclick="viewEntry('${e.id}')">
+      ${miniSvg}
+      <div class="entry-card-body">
+        <div class="entry-card-date">${formatDate(parseInt(e.id))} · ${filled}/12</div>
+        <div class="entry-card-title">${esc(e.title || '無題')}</div>
+        <div class="entry-card-tags">
+          ${tags.map(t => `<span class="tag">${esc(t.length > 18 ? t.slice(0,18)+'…' : t)}</span>`).join('')}
+          ${tags.length === 0 ? '<span class="tag" style="opacity:.5">まだ言葉がありません</span>' : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Wheel SVG ───────────────────────────────────────────────────────────
+const TAU = Math.PI * 2;
+
+function buildWheelPaths(statements, interactive, withLabels, outerR = 185, innerR = 55) {
+  const n = 12;
+  const step = TAU / n;
+  let html = '';
+
+  for (let i = 0; i < n; i++) {
+    const a0 = i * step - Math.PI / 2;
+    const a1 = a0 + step;
+    const filled = statements[i] && statements[i].trim();
+
+    const x1 = cos(a0) * innerR, y1 = sin(a0) * innerR;
+    const x2 = cos(a1) * innerR, y2 = sin(a1) * innerR;
+    const x3 = cos(a1) * outerR, y3 = sin(a1) * outerR;
+    const x4 = cos(a0) * outerR, y4 = sin(a0) * outerR;
+
+    const d = `M${x1},${y1} A${innerR},${innerR} 0 0,1 ${x2},${y2} L${x3},${y3} A${outerR},${outerR} 0 0,0 ${x4},${y4}Z`;
+    const cls = `seg-path ${filled ? 'seg-fill-'+i : 'seg-empty'} ${interactive ? '' : 'readonly'}`;
+    const click = interactive ? `onclick="openModal(${i})"` : '';
+
+    html += `<path class="${cls}" d="${d}" ${click}/>`;
+
+    if (withLabels) {
+      const mid = a0 + step / 2;
+      const lr = (innerR + outerR) / 2;
+      const lx = cos(mid) * lr, ly = sin(mid) * lr;
+      const rot = mid * 180 / Math.PI + 90;
+      const fc = filled ? '#999' : '#ccc';
+      const fs = outerR > 100 ? 9 : 6;
+      html += `<text x="${lx}" y="${ly}" text-anchor="middle" dominant-baseline="middle"
+        font-size="${fs}" font-family="Noto Sans JP,sans-serif" fill="${fc}"
+        transform="rotate(${rot},${lx},${ly})" style="pointer-events:none">${LABELS[i]}</text>`;
+    }
+  }
+
+  // Center circle
+  html += `<circle cx="0" cy="0" r="${innerR - 2}" fill="white" stroke="#e6e3e0" stroke-width="1.5"/>`;
+
+  // Progress arc
+  const cnt = statements.filter(s => s && s.trim()).length;
+  if (cnt > 0 && outerR > 100) {
+    const arcR = innerR - 14;
+    const pct = cnt / 12;
+    const sa = -Math.PI / 2;
+    const ea = sa + pct * TAU;
+    const large = pct > 0.5 ? 1 : 0;
+    let pd;
+    if (pct >= 1) pd = `M0,${-arcR} A${arcR},${arcR} 0 1,1 0.01,${-arcR}Z`;
+    else pd = `M${cos(sa)*arcR},${sin(sa)*arcR} A${arcR},${arcR} 0 ${large},1 ${cos(ea)*arcR},${sin(ea)*arcR}`;
+    html += `<path d="${pd}" fill="none" stroke="#c9b8a8" stroke-width="2" stroke-linecap="round"/>`;
+    html += `<text x="0" y="4" text-anchor="middle" dominant-baseline="middle"
+      font-size="11" font-family="Noto Sans JP,sans-serif" fill="#bbb">${cnt}/12</text>`;
+  }
+
+  if (outerR > 100) {
+    html += `<text x="0" y="${cnt > 0 ? -10 : 4}" text-anchor="middle" dominant-baseline="middle"
+      font-size="10" font-family="Noto Sans JP,sans-serif" fill="#ccc">願い</text>`;
+  }
+
+  return html;
+}
+
+function renderWheel(svgId, statements, interactive) {
+  const svg = document.getElementById(svgId);
+  svg.innerHTML = buildWheelPaths(statements, interactive, true);
+}
+
+// ─── Statement rows ───────────────────────────────────────────────────────
+function renderRows(containerId, statements, interactive) {
+  const el = document.getElementById(containerId);
+
+  if (!interactive) {
+    const filled = statements.map((s, i) => ({ s, i })).filter(x => x.s && x.s.trim());
+    if (filled.length === 0) {
+      el.innerHTML = '<div style="color:var(--text-light);font-size:13px;padding:16px 0">まだ言葉が追加されていません。</div>';
+      return;
+    }
+    el.innerHTML = filled.map(({ s, i }) => `
+      <div class="statement-row readonly">
+        <span class="row-num">${String(i+1).padStart(2,'0')}</span>
+        <span class="row-text">${esc(s)}</span>
+      </div>`).join('');
+    return;
+  }
+
+  el.innerHTML = statements.map((s, i) => `
+    <div class="statement-row ${s ? '' : 'empty'}" onclick="openModal(${i})">
+      <span class="row-num">${String(i+1).padStart(2,'0')}</span>
+      <span class="row-text ${s ? '' : 'placeholder'}">${s ? esc(s) : LABELS[i] + 'について書く…'}</span>
+    </div>`).join('');
+}
+
+// ─── Modal ────────────────────────────────────────────────────────────────
+function openModal(idx) {
+  state.editingIdx = idx;
+  document.getElementById('modal-meta').textContent = `${String(idx+1).padStart(2,'0')}  ${LABELS[idx]}`;
+  document.getElementById('modal-ta').value = state.statements[idx] || '';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(() => {
+    const ta = document.getElementById('modal-ta');
+    ta.focus();
+    ta.setSelectionRange(ta.value.length, ta.value.length);
+  }, 280);
+}
+
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+  state.editingIdx = null;
+}
+
+function overlayClick(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+function saveStatement() {
+  if (state.editingIdx === null) return;
+  state.statements[state.editingIdx] = document.getElementById('modal-ta').value.trim();
+  closeModal();
+  renderWheel('editor-svg', state.statements, true);
+  renderRows('editor-rows', state.statements, true);
+}
+
+// ─── Keyboard ────────────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    if (document.getElementById('overlay').classList.contains('open')) saveStatement();
+  }
+});
+
+// ─── Utils ───────────────────────────────────────────────────────────────
+const cos = a => Math.cos(a);
+const sin = a => Math.sin(a);
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+function formatDate(ts) {
+  return new Date(ts).toLocaleDateString('ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+  });
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────
+renderList();
+</script>
+</body>
+</html>
