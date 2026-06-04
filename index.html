@@ -6,6 +6,7 @@
   <title>Focus Wheel — 理想の未来日記</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -534,6 +535,39 @@
       .entry-card { padding: 18px 20px; }
       .modal { border-radius: 24px 24px 0 0; }
     }
+
+    /* ─── Supabase status ─── */
+    .sync-bar {
+      position: fixed;
+      top: 56px;
+      left: 0; right: 0;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-weight: 400;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s;
+    }
+    .sync-bar.visible { opacity: 1; }
+    .sync-bar.loading { background: #f5f0eb; color: var(--text-mid); }
+    .sync-bar.saving  { background: #edf5f0; color: #4a8c6a; }
+    .sync-bar.error   { background: #fdf0f0; color: #c44; pointer-events: all; }
+
+    .spinner {
+      width: 12px; height: 12px;
+      border: 1.5px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -546,6 +580,8 @@
     </div>
   </div>
 </header>
+
+<div class="sync-bar" id="sync-bar"></div>
 
 <main>
 
@@ -638,6 +674,31 @@
 </div>
 
 <script>
+// ─── Supabase ────────────────────────────────────────────────────────────
+const SUPABASE_URL = 'https://dtlxfdadojntpigqqcec.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_sYzvLqbD3Dm2L24nAVfXuQ_qUI42VDB';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const TABLE = 'wheel_entries';
+
+// ─── Sync indicator ──────────────────────────────────────────────────────
+let syncTimer = null;
+function showSync(type, msg) {
+  const bar = document.getElementById('sync-bar');
+  bar.className = `sync-bar visible ${type}`;
+  bar.innerHTML = type !== 'error'
+    ? `<span class="spinner"></span>${msg}`
+    : `⚠ ${msg}`;
+  clearTimeout(syncTimer);
+  if (type !== 'loading') {
+    syncTimer = setTimeout(() => bar.classList.remove('visible'), 2200);
+  }
+}
+function hideSync() {
+  const bar = document.getElementById('sync-bar');
+  clearTimeout(syncTimer);
+  bar.classList.remove('visible');
+}
+
 // ─── Data ───────────────────────────────────────────────────────────────
 const STORE_KEY = 'focuswheel_v1';
 let entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
@@ -649,8 +710,48 @@ let state = {
   editingIdx: null,
 };
 
-function save() {
+function cacheLocal() {
   localStorage.setItem(STORE_KEY, JSON.stringify(entries));
+}
+
+async function loadEntries() {
+  showSync('loading', 'データを読み込んでいます…');
+  try {
+    const { data, error } = await db
+      .from(TABLE)
+      .select('id, title, statements')
+      .order('id', { ascending: false });
+    if (error) throw error;
+    entries = (data || []).map(r => ({
+      id: r.id,
+      title: r.title,
+      statements: Array.isArray(r.statements) ? r.statements : JSON.parse(r.statements || '[]'),
+    }));
+    cacheLocal();
+    hideSync();
+  } catch (err) {
+    console.error('Supabase load error:', err);
+    showSync('error', '読み込みに失敗しました。ローカルデータを使用しています。');
+    entries = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
+  }
+}
+
+async function upsertEntry(entry) {
+  showSync('saving', '保存中…');
+  const { error } = await db.from(TABLE).upsert({
+    id: entry.id,
+    title: entry.title,
+    statements: entry.statements,
+  });
+  if (error) throw error;
+  showSync('saving', '保存しました');
+}
+
+async function removeEntry(id) {
+  showSync('saving', '削除中…');
+  const { error } = await db.from(TABLE).delete().eq('id', id);
+  if (error) throw error;
+  showSync('saving', '削除しました');
 }
 
 // ─── Segment metadata ────────────────────────────────────────────────────
@@ -707,21 +808,34 @@ function viewEntry(id) {
   showView('detail');
 }
 
-function saveEntry() {
+async function saveEntry() {
   const title = document.getElementById('editor-title').value.trim() || '無題';
-  const idx = entries.findIndex(e => e.id === state.currentId);
   const entry = { id: state.currentId, title, statements: [...state.statements] };
+  const idx = entries.findIndex(e => e.id === state.currentId);
   if (idx >= 0) entries[idx] = entry;
   else entries.push(entry);
-  save();
+  cacheLocal();
+  try {
+    await upsertEntry(entry);
+  } catch (err) {
+    console.error('Supabase save error:', err);
+    showSync('error', '保存に失敗しました（ローカルには保存済み）');
+  }
   goHome();
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!confirm('このホイールを削除しますか？')) return;
-  entries = entries.filter(e => e.id !== state.currentId);
-  save();
+  const id = state.currentId;
+  entries = entries.filter(e => e.id !== id);
+  cacheLocal();
   goHome();
+  try {
+    await removeEntry(id);
+  } catch (err) {
+    console.error('Supabase delete error:', err);
+    showSync('error', '削除に失敗しました（ローカルからは削除済み）');
+  }
 }
 
 // ─── List rendering ───────────────────────────────────────────────────────
@@ -911,7 +1025,11 @@ function formatDate(ts) {
 }
 
 // ─── Init ─────────────────────────────────────────────────────────────────
-renderList();
+(async () => {
+  renderList();           // show cached data immediately
+  await loadEntries();    // then refresh from Supabase
+  renderList();
+})();
 </script>
 </body>
 </html>
